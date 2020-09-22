@@ -1,2 +1,2 @@
 # OSM-AI-Agent
-AI-Agent chart for OSM
+AI-Agent container for OSM helm chart
