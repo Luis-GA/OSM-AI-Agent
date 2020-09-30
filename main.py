@@ -26,7 +26,8 @@ if __name__ == '__main__':
     logger.info('Dummy AI Agent')
     logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
-    requests.get('http://7582202cdd18.ngrok.io/')
+    #server = os.environ.get('server')
+    requests.get('http://8ca7ab4651c3.ngrok.io')
     if config:
         config = b64decode(config)
         config = ast.literal_eval(config.decode())
