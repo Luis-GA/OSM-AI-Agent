@@ -23,6 +23,36 @@ def get_prometheus_data():
     #with open('timeseries.json', 'w') as outfile:
     #    json.dump(timeseries, outfile)
 
+def get_ns_info():
+    client = MongoClient('mongo', 27017)
+    osm = client['osm']
+    values = {}
+
+    vnf = os.environ.get('vnf-id')
+    vnf_data = dict(osm['vnfrs'].find({'_id': vnf}))
+    values['member-vnf-index-ref'] = vnf_data['member-vnf-index-ref']
+    values['nsi_id'] = vnf_data['nsr-id-ref']
+    ips = {}
+    for vdu in vnf_data.get('vdur'):
+        result = ips.get(vdu.get('vdu-id-ref'))
+        if result:
+            if isinstance(result, list):
+                result.append(vdu.get('ip-address'))
+                ips[vdu.get('vdu-id-ref')] = result
+            else:
+                ip_list = [result]
+                ip_list.append(vdu.get('ip-address'))
+                ips[vdu.get('vdu-id-ref')] = ip_list
+        else:
+            ips[vdu.get('vdu-id-ref')] = vdu.get('ip-address')
+    values['ip-address'] = ips
+
+    ns_data = dict(osm['nsrs'].find({'_id': values['nsi_id']}))
+
+    values['ns_name'] = ns_data.get('name')
+    values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
+
+    return values
 
 if __name__ == '__main__':
     logger.info('Dummy AI Agent')
@@ -39,8 +69,7 @@ if __name__ == '__main__':
         logger.info('No config available')
 
     logger.info("Now the database:")
-    client = MongoClient('mongo', 27017)
-    osm = client['osm']
 
-    logger.info(osm.collection_names())
+
+    logger.info(get_ns_info())
 
