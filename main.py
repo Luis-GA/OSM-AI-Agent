@@ -71,6 +71,7 @@ if __name__ == '__main__':
     # get_prometheus_data(ns_id)
     if len(values['vdu-data']) == 1:
         client = MonClient()
-        client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
+        alarm_uuid = await client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
                             vdu_name=values['vdu-data'][0]['name'], vnf_member_index=values['member-vnf-index-ref'],
                             threshold=80, statistic='AVERAGE', operation='LT')
+        logger.info("ALARM id is {}".format(alarm_uuid))
