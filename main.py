@@ -29,7 +29,7 @@ def get_ns_info():
     values = {}
 
     vnf = os.environ.get('vnf-id')
-    vnf_data = dict(osm['vnfrs'].find({'_id': vnf}))
+    vnf_data = list(osm['vnfrs'].find({'_id': vnf}))[0]
     values['member-vnf-index-ref'] = vnf_data['member-vnf-index-ref']
     values['nsi_id'] = vnf_data['nsr-id-ref']
     ips = {}
@@ -47,7 +47,7 @@ def get_ns_info():
             ips[vdu.get('vdu-id-ref')] = vdu.get('ip-address')
     values['ip-address'] = ips
 
-    ns_data = dict(osm['nsrs'].find({'_id': values['nsi_id']}))
+    ns_data = list(osm['nsrs'].find({'_id': values['nsi_id']}))[0]
 
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
