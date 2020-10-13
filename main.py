@@ -14,14 +14,14 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
 
 
-def get_prometheus_data():
-    client = PrometheusClient('http://192.168.33.20:9091')
-    query = 'osm_cpu_utilization'
-    instance = '192.168.33.133:9100'
-    ts_data = client.range_query(query, instance, step=120, days=2) # returns PrometheusData object
+def get_prometheus_data(ns_id):
+    client = PrometheusClient('http://prometheus:9090')
+    query = 'osm_average_memory_utilization'
+    ts_data = client.range_query(query, ns_id, step=120, days=2) # returns PrometheusData object
     timeseries = ts_data['result'][0]['values']
-    #with open('timeseries.json', 'w') as outfile:
-    #    json.dump(timeseries, outfile)
+    logger.info('timeseries:')
+    logger.info(timeseries[0])
+
 
 def get_ns_info():
     client = MongoClient('mongo', 27017)
@@ -55,8 +55,9 @@ def get_ns_info():
     return values
 
 if __name__ == '__main__':
+
     logger.info('Dummy AI Agent')
-    logger.info('Environment variables:\n{}'.format(os.environ))
+    #logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
     # server = os.environ.get('server')
     #requests.post('http://8ca7ab4651c3.ngrok.io', data={'vnf': os.environ.get('HOSTNAME')})
@@ -69,7 +70,12 @@ if __name__ == '__main__':
         logger.info('No config available')
 
     logger.info("Now the database:")
+    values = get_ns_info()
+    ns_id = values['nsi_id']
+    logger.info(ns_id)
+    get_prometheus_data(ns_id)
+    
 
 
-    logger.info(get_ns_info())
+
 
