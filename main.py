@@ -49,7 +49,6 @@ def get_ns_info():
     return values
 
 
-
 if __name__ == '__main__':
 
     logger.info('Dummy AI Agent')
@@ -67,14 +66,11 @@ if __name__ == '__main__':
     values = get_ns_info()
     ns_id = values['nsi_id']
 
-
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 1545:
-
+    if len(values['vdu-data']) == 1:
         client = MonClient()
         client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
-                            vdu_name= values['vdu-data'][0]['name'], vnf_member_index= values['member-vnf-index-ref'],
-                            threshold= 80, statistic= 'AVERAGE', operation = 'LT')
-
+                            vdu_name=values['vdu-data'][0]['name'], vnf_member_index=values['member-vnf-index-ref'],
+                            threshold=80, statistic='AVERAGE', operation='LT')
