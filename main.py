@@ -5,6 +5,7 @@ import os
 from pymongo import MongoClient
 from prom_lib.prometheus_client import PrometheusClient
 from mon_client import MonClient
+import asyncio
 
 logger = logging.getLogger("AI-Agent")
 stream_handler = logging.StreamHandler()
@@ -71,7 +72,11 @@ if __name__ == '__main__':
     # get_prometheus_data(ns_id)
     if len(values['vdu-data']) == 1:
         client = MonClient()
-        alarm_uuid = await client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
-                            vdu_name=values['vdu-data'][0]['name'], vnf_member_index=values['member-vnf-index-ref'],
-                            threshold=80, statistic='AVERAGE', operation='LT')
+        loop = asyncio.get_event_loop()
+        alarm_uuid = loop.run_until_complete(
+            client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
+                                vdu_name=values['vdu-data'][0]['name'],
+                                vnf_member_index=values['member-vnf-index-ref'], threshold=80,
+                                statistic='AVERAGE', operation='LT'))
+
         logger.info("ALARM id is {}".format(alarm_uuid))
