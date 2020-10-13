@@ -4,6 +4,7 @@ import logging
 import os
 from pymongo import MongoClient
 from prom_lib.prometheus_client import PrometheusClient
+from mon_client import MonClient
 
 logger = logging.getLogger("AI-Agent")
 stream_handler = logging.StreamHandler()
@@ -14,13 +15,14 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
 
 
-def get_prometheus_data(ns_id):
+def get_prometheus_data(ns_id, query='', step=120, days=2):
     client = PrometheusClient('http://prometheus:9090')
-    query = 'osm_average_memory_utilization'
-    ts_data = client.range_query(query, ns_id, step=120, days=2) # returns PrometheusData object
+    if not query:
+        query = 'osm_average_memory_utilization'
+
+    ts_data = client.range_query(query, ns_id, step=step, days=days)
     timeseries = ts_data['result'][0]['values']
-    logger.info('timeseries:')
-    logger.info(timeseries[0])
+    return timeseries
 
 
 def get_ns_info():
@@ -32,20 +34,12 @@ def get_ns_info():
     vnf_data = list(osm['vnfrs'].find({'_id': vnf}))[0]
     values['member-vnf-index-ref'] = vnf_data['member-vnf-index-ref']
     values['nsi_id'] = vnf_data['nsr-id-ref']
-    ips = {}
+    vduData = []
+
     for vdu in vnf_data.get('vdur'):
-        result = ips.get(vdu.get('vdu-id-ref'))
-        if result:
-            if isinstance(result, list):
-                result.append(vdu.get('ip-address'))
-                ips[vdu.get('vdu-id-ref')] = result
-            else:
-                ip_list = [result]
-                ip_list.append(vdu.get('ip-address'))
-                ips[vdu.get('vdu-id-ref')] = ip_list
-        else:
-            ips[vdu.get('vdu-id-ref')] = vdu.get('ip-address')
-    values['ip-address'] = ips
+        vduData.append(
+            {'vdu-id-ref': vdu.get('vdu-id-ref'), 'ip-address': vdu.get('ip-address'), 'name': vdu.get('name')})
+    values['vdu-data'] = vduData
 
     ns_data = list(osm['nsrs'].find({'_id': values['nsi_id']}))[0]
 
@@ -54,13 +48,13 @@ def get_ns_info():
 
     return values
 
+
+
 if __name__ == '__main__':
 
     logger.info('Dummy AI Agent')
-    #logger.info('Environment variables:\n{}'.format(os.environ))
+    # logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
-    # server = os.environ.get('server')
-    #requests.post('http://8ca7ab4651c3.ngrok.io', data={'vnf': os.environ.get('HOSTNAME')})
 
     if config:
         config = b64decode(config)
@@ -72,10 +66,15 @@ if __name__ == '__main__':
     logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
-    logger.info(ns_id)
-    get_prometheus_data(ns_id)
-    
 
 
+    logger.info(values)
 
+    # get_prometheus_data(ns_id)
+    if len(values['vdu-data']) == 1545:
+
+        client = MonClient()
+        client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
+                            vdu_name= values['vdu-data'][0]['name'], vnf_member_index= values['member-vnf-index-ref'],
+                            threshold= 80, statistic= 'AVERAGE', operation = 'LT')
 
