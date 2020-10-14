@@ -75,28 +75,38 @@ if __name__ == '__main__':
     # get_prometheus_data(ns_id)
     if len(values['vdu-data']) == 1:
         logger.info("KAFKA scale action")
-        date1= datetime.datetime.now().timestamp()
+        date1 = datetime.datetime.now().timestamp()
         date2 = datetime.datetime.now().timestamp()
-        uid = '086cfe47-9930-4a29-8168-487eac45bd87'
+        now = datetime.datetime.now()
+        now_str = now.strftime("%d-%m-%Y %H:%M:%S")
+        uid = '086cfe47-9930-4a29-8168-487eac45bd89'
 
-
-
+        message = {'schema_version': '1.1', 'schema_type': 'notify_alarm',
+                   'notify_details': {'alarm_uuid': uid,
+                                      'metric_name': 'osm_average_memory_utilization', 'threshold_value': 80.0,
+                                      'operation': 'lt', 'severity': 'critical', 'status': 'insufficient-data',
+                                      'start_date': str(now_str),
+                                      'tags': {'ns_id': ns_id,
+                                               'vdu_name': 'testing-ee-VyOS Router-vyos-VM-1',
+                                               'vnf_member_index': 'VyOS Router'}}}
+        """
         message = {'_admin': {'created': date1, 'modified': date1,
-                          'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
-                          'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
-               '_id': uid, 'detailedStatus': None, 'errorMessage': None,
-               'id': uid, 'isAutomaticInvocation': False, 'isCancelPending': False,
-               'lcmOperationType': 'scale',
-               'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
-                         'self': '/osm/nslcm/v1/ns_lcm_op_occs/{}'.format(uid)},
-               'nsInstanceId': ns_id,
-               'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
-                                   'scaleType': 'SCALE_VNF', 'scaleVnfData': {
-                       'scaleByStepData': {'member-vnf-index': 'VyOS Router',
-                                           'scaling-group-descriptor': 'vyos-VM_autoscale', 'scaling-policy': 'string'},
-                       'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1}, 'operationState': 'PROCESSING',
-               'queuePosition': None, 'stage': None, 'startTime': date2,
-               'statusEnteredTime': date2}
+                              'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
+                              'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
+                   '_id': uid, 'detailedStatus': None, 'errorMessage': None,
+                   'id': uid, 'isAutomaticInvocation': False, 'isCancelPending': False,
+                   'lcmOperationType': 'scale',
+                   'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
+                             'self': '/osm/nslcm/v1/ns_lcm_op_occs/{}'.format(uid)},
+                   'nsInstanceId': ns_id,
+                   'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
+                                       'scaleType': 'SCALE_VNF', 'scaleVnfData': {
+                           'scaleByStepData': {'member-vnf-index': 'VyOS Router',
+                                               'scaling-group-descriptor': 'vyos-VM_autoscale',
+                                               'scaling-policy': 'string'},
+                           'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1}, 'operationState': 'PROCESSING',
+                   'queuePosition': None, 'stage': None, 'startTime': date2,
+                   'statusEnteredTime': date2}"""
 
         logger.info("Luis {}".format(message))
         loop = asyncio.get_event_loop()
@@ -104,7 +114,6 @@ if __name__ == '__main__':
         loop.run_until_complete(msg_bus.aiowrite('alarm_response', 'notify_alarm', message))
 
         logger.info("Terminado")
-
 
         """
         loop = asyncio.get_event_loop()
