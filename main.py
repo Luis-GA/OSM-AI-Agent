@@ -55,7 +55,7 @@ def get_ns_info():
 
 if __name__ == '__main__':
 
-    logger.info('Dummy AI Agent')
+    logger.info('Dummy AI Agent V3')
     # logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
 
@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
         loop.run_until_complete(producer.start())
         try:
-            loop.run_until_complete(producer.send_and_wait("alarm_request", key="create_alarm_request", value=json.dumps(msg)))
+            loop.run_until_complete(producer.send_and_wait("alarm_response", key="notify_alarm", value=json.dumps(msg)))
         finally:
             loop.run_until_complete(producer.stop())
         """
