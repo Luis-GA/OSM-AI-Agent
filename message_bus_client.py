@@ -24,13 +24,13 @@
 import asyncio
 from typing import List, Callable
 
-from osm_common import msgkafka
+from msg_client import MsgKafka
 
 
 class MessageBusClient:
     def __init__(self, loop=None):
 
-        self.msg_bus = msgkafka.MsgKafka()
+        self.msg_bus = MsgKafka()
 
         self.msg_bus.connect({"driver": "kafka", "host": "kafka", "port": 9092, "group_id": "mon-consumer"})
         if not loop:
