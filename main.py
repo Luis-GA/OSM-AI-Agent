@@ -73,7 +73,8 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 1:
+    if len(values['vdu-data']) == 90:
+        logger.info("KAFKA scale action")
         date1= datetime.datetime.now().timestamp()
         date2= datetime.datetime.now().timestamp()
         msg = {'_admin': {'created': date1, 'modified': date1,
@@ -104,6 +105,7 @@ if __name__ == '__main__':
             loop.run_until_complete(producer.send_and_wait("alarm_response", key="notify_alarm", value=json.dumps(msg)))
         finally:
             loop.run_until_complete(producer.stop())
+        logger.info("KAFKA scale action triggered")
         """
         client = MonClient()
         loop = asyncio.get_event_loop()
