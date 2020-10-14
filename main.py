@@ -99,11 +99,11 @@ if __name__ == '__main__':
                                     key_serializer=str.encode,
                                     value_serializer=str.encode)
 
-        await producer.start()
+        loop.run_until_complete(producer.start())
         try:
-            await producer.send_and_wait("alarm_request", key="create_alarm_request", value=json.dumps(msg))
+            loop.run_until_complete(producer.send_and_wait("alarm_request", key="create_alarm_request", value=json.dumps(msg)))
         finally:
-            await producer.stop()
+            loop.run_until_complete(producer.stop())
         """
         client = MonClient()
         loop = asyncio.get_event_loop()
