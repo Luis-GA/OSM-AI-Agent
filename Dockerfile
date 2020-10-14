@@ -2,6 +2,7 @@ FROM python:slim
 
 WORKDIR /AI-Agent
 
+RUN apt install git
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
