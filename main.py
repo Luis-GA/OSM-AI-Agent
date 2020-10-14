@@ -78,6 +78,9 @@ if __name__ == '__main__':
         date1= datetime.datetime.now().timestamp()
         date2 = datetime.datetime.now().timestamp()
         uid = '086cfe47-9930-4a29-8168-487eac45bd87'
+
+
+
         message = {'_admin': {'created': date1, 'modified': date1,
                           'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
                           'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
@@ -95,6 +98,7 @@ if __name__ == '__main__':
                'queuePosition': None, 'stage': None, 'startTime': date2,
                'statusEnteredTime': date2}
 
+        logger.info("Luis {}".format(message))
         loop = asyncio.get_event_loop()
         msg_bus = MessageBusClient()
         loop.run_until_complete(msg_bus.aiowrite('alarm_response', 'notify_alarm', message))
