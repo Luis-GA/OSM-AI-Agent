@@ -6,6 +6,9 @@ from pymongo import MongoClient
 from prom_lib.prometheus_client import PrometheusClient
 from mon_client import MonClient
 import asyncio
+import json
+import datetime
+from aiokafka import AIOKafkaProducer
 
 logger = logging.getLogger("AI-Agent")
 stream_handler = logging.StreamHandler()
@@ -70,7 +73,38 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 99:
+    if len(values['vdu-data']) == 1:
+        date1= datetime.datetime.now().timestamp()
+        date2= datetime.datetime.now().timestamp()
+        msg = {'_admin': {'created': date1, 'modified': date1,
+                          'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
+                          'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
+               '_id': '086cfe47-9930-4a29-8168-487eac54bd67', 'detailedStatus': None, 'errorMessage': None,
+               'id': '086cfe47-9930-4a29-8168-487eac45bd67', 'isAutomaticInvocation': False, 'isCancelPending': False,
+               'lcmOperationType': 'scale',
+               'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
+                         'self': '/osm/nslcm/v1/ns_lcm_op_occs/086cfe47-9930-4a29-8168-487eac54bd67'},
+               'nsInstanceId': ns_id,
+               'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
+                                   'scaleType': 'SCALE_VNF', 'scaleVnfData': {
+                       'scaleByStepData': {'member-vnf-index': 'VyOS Router',
+                                           'scaling-group-descriptor': 'vyos-VM_autoscale', 'scaling-policy': 'string'},
+                       'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1}, 'operationState': 'PROCESSING',
+               'queuePosition': None, 'stage': None, 'startTime': date2,
+               'statusEnteredTime': date2}
+        loop = asyncio.get_event_loop()
+        kafka_server = '{}:{}'.format('kafka', '9092')
+        producer = AIOKafkaProducer(loop=loop,
+                                    bootstrap_servers=kafka_server,
+                                    key_serializer=str.encode,
+                                    value_serializer=str.encode)
+
+        await producer.start()
+        try:
+            await producer.send_and_wait("alarm_request", key="create_alarm_request", value=json.dumps(msg))
+        finally:
+            await producer.stop()
+        """
         client = MonClient()
         loop = asyncio.get_event_loop()
         alarm_uuid = loop.run_until_complete(
@@ -79,4 +113,4 @@ if __name__ == '__main__':
                                 vnf_member_index=values['member-vnf-index-ref'], threshold=80,
                                 statistic='AVERAGE', operation='LT'))
 
-        logger.info("ALARM id is {}".format(alarm_uuid))
+        logger.info("ALARM id is {}".format(alarm_uuid))"""
