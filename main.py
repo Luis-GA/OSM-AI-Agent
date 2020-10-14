@@ -8,7 +8,7 @@ from mon_client import MonClient
 import asyncio
 import json
 import datetime
-from aiokafka import AIOKafkaProducer
+from message_bus_client import MessageBusClient
 
 logger = logging.getLogger("AI-Agent")
 stream_handler = logging.StreamHandler()
@@ -55,7 +55,7 @@ def get_ns_info():
 
 if __name__ == '__main__':
 
-    logger.info('Dummy AI Agent V3')
+    logger.info('Dummy AI Agent V3.1')
     # logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
 
@@ -73,18 +73,19 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 90:
+    if len(values['vdu-data']) == 1:
         logger.info("KAFKA scale action")
         date1= datetime.datetime.now().timestamp()
-        date2= datetime.datetime.now().timestamp()
-        msg = {'_admin': {'created': date1, 'modified': date1,
+        date2 = datetime.datetime.now().timestamp()
+        uid = '086cfe47-9930-4a29-8168-487eac45bd87'
+        message = {'_admin': {'created': date1, 'modified': date1,
                           'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
                           'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
-               '_id': '086cfe47-9930-4a29-8168-487eac54bd67', 'detailedStatus': None, 'errorMessage': None,
-               'id': '086cfe47-9930-4a29-8168-487eac45bd67', 'isAutomaticInvocation': False, 'isCancelPending': False,
+               '_id': uid, 'detailedStatus': None, 'errorMessage': None,
+               'id': uid, 'isAutomaticInvocation': False, 'isCancelPending': False,
                'lcmOperationType': 'scale',
                'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
-                         'self': '/osm/nslcm/v1/ns_lcm_op_occs/086cfe47-9930-4a29-8168-487eac54bd67'},
+                         'self': '/osm/nslcm/v1/ns_lcm_op_occs/{}'.format(uid)},
                'nsInstanceId': ns_id,
                'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
                                    'scaleType': 'SCALE_VNF', 'scaleVnfData': {
@@ -93,6 +94,15 @@ if __name__ == '__main__':
                        'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1}, 'operationState': 'PROCESSING',
                'queuePosition': None, 'stage': None, 'startTime': date2,
                'statusEnteredTime': date2}
+
+        loop = asyncio.get_event_loop()
+        msg_bus = MessageBusClient()
+        loop.run_until_complete(msg_bus.aiowrite('alarm_response', 'notify_alarm', message))
+
+        logger.info("Terminado")
+
+
+        """
         loop = asyncio.get_event_loop()
         kafka_server = '{}:{}'.format('kafka', '9092')
         producer = AIOKafkaProducer(loop=loop,
@@ -106,6 +116,8 @@ if __name__ == '__main__':
         finally:
             loop.run_until_complete(producer.stop())
         logger.info("KAFKA scale action triggered")
+        """
+
         """
         client = MonClient()
         loop = asyncio.get_event_loop()

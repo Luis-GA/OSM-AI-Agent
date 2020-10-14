@@ -2,3 +2,4 @@ requests
 pymongo
 aiokafka
 pyyaml
+git+https://osm.etsi.org/gerrit/osm/common.git#egg=osm-common
