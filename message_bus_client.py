@@ -32,7 +32,7 @@ class MessageBusClient:
 
         self.msg_bus = MsgKafka()
 
-        self.msg_bus.connect({"driver": "kafka", "host": "kafka", "port": 9092, "group_id": "mon-consumer"})
+        self.msg_bus.connect({"driver": "kafka", "host": "kafka", "port": 9092, "group_id": "lcm-server"})
         if not loop:
             loop = asyncio.get_event_loop()
         self.loop = loop
