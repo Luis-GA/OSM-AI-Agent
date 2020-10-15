@@ -75,7 +75,7 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 1:
+    if len(values['vdu-data']) == 99:
         logger.info("KAFKA scale action")
         date1 = datetime.datetime.now().timestamp()
         date2 = datetime.datetime.now().timestamp()
