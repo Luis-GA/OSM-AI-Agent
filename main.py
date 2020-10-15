@@ -75,13 +75,13 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 199:
+    if len(values['vdu-data']) == 1:
         logger.info("KAFKA scale action")
         date1 = datetime.datetime.now().timestamp()
         date2 = datetime.datetime.now().timestamp()
         #now = datetime.datetime.utcnow()
         #now_str = now.strftime("%d-%m-%Y %H:%M:%S")
-        uid = str(uuid.uuid1()) #'086cfe47-9930-4a29-8168-487eac45bd89'
+        uid = '1b16eef4-716f-4779-96fc-78979667a77a'# str(uuid.uuid1()) '086cfe47-9930-4a29-8168-487eac45bd89'
         """
         message = {'schema_version': '1.1', 'schema_type': 'notify_alarm',
                    'notify_details': {'alarm_uuid': uid,
