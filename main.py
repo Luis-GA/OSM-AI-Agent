@@ -10,6 +10,8 @@ import json
 import datetime
 from message_bus_client import MessageBusClient
 
+import uuid
+
 logger = logging.getLogger("AI-Agent v8")
 stream_handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s: %(message)s')
@@ -73,13 +75,13 @@ if __name__ == '__main__':
     logger.info(values)
 
     # get_prometheus_data(ns_id)
-    if len(values['vdu-data']) == 10:
+    if len(values['vdu-data']) == 1:
         logger.info("KAFKA scale action")
         date1 = datetime.datetime.now().timestamp()
         date2 = datetime.datetime.now().timestamp()
         #now = datetime.datetime.utcnow()
         #now_str = now.strftime("%d-%m-%Y %H:%M:%S")
-        uid = '086cfe47-9930-4a29-8168-487eac45bd89'
+        uid = str(uuid.uuid1()) #'086cfe47-9930-4a29-8168-487eac45bd89'
         """
         message = {'schema_version': '1.1', 'schema_type': 'notify_alarm',
                    'notify_details': {'alarm_uuid': uid,
