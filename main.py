@@ -54,7 +54,7 @@ def get_ns_info():
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
     timestamp = datetime.datetime.utcnow().timestamp()
-    values['token'] = osm.tokens.find_one({'expires': {'$gt': timestamp}, 'admin': True}).find('id')
+    values['token'] = osm['tokens'].find_one({'expires': {'$gt': timestamp}, 'admin': True}).find('id')
     return values
 
 
