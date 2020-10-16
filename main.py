@@ -105,5 +105,5 @@ if __name__ == '__main__':
     token = values['token']
     update_token(values['token'])
 
-    if len(values['vdu-data']) == 99:
+    if len(values['vdu-data']) == 1:
         scale_ns(ns_id, token)
