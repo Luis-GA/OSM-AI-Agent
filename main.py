@@ -2,6 +2,8 @@ from base64 import b64decode
 import ast
 import logging
 import os
+
+import requests
 from pymongo import MongoClient
 from prom_lib.prometheus_client import PrometheusClient
 from mon_client import MonClient
@@ -51,8 +53,35 @@ def get_ns_info():
 
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
-
+    timestamp = datetime.datetime.utcnow().timestamp()
+    values['token'] = osm.tokens.find_one({'expires': {'$gt': timestamp}, 'admin': True}).find('id')
     return values
+
+
+def scale_ns(nsi_id, token):
+    token = "Bearer " + token
+    headers = {'Authorization': token, 'accept': 'application/json'}
+    url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
+    scale_data = {
+        "scaleType": "SCALE_VNF",
+        "timeout_ns_scale": 1,
+        "scaleVnfData": {
+            "scaleVnfType": "SCALE_OUT",
+            "scaleByStepData": {
+                "scaling-group-descriptor": "vyos-VM_autoscale",
+                "scaling-policy": "string",
+                "member-vnf-index": "VyOS Router"
+            }
+        }
+    }
+    response = requests.post(url, data=str(scale_data), verify=False, headers=headers)
+    return response.text
+
+
+def update_token(token):
+    token = "Bearer " + token
+    headers = {'Authorization': token, 'accept': 'application/json'}
+    requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
 
 
 if __name__ == '__main__':
@@ -71,93 +100,8 @@ if __name__ == '__main__':
     logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
+    token = values['token']
+    update_token(values['token'])
 
-    logger.info(values)
-
-    # get_prometheus_data(ns_id)
     if len(values['vdu-data']) == 99:
-        logger.info("KAFKA scale action")
-        date1 = datetime.datetime.now().timestamp()
-        date2 = datetime.datetime.now().timestamp()
-        #now = datetime.datetime.utcnow()
-        #now_str = now.strftime("%d-%m-%Y %H:%M:%S")
-        uid = '1b16eef4-716f-4779-96fc-78979667a77a'# str(uuid.uuid1()) '086cfe47-9930-4a29-8168-487eac45bd89'
-        """
-        message = {'schema_version': '1.1', 'schema_type': 'notify_alarm',
-                   'notify_details': {'alarm_uuid': uid,
-                                      'metric_name': 'osm_average_memory_utilization', 'threshold_value': 80.0,
-                                      'operation': 'lt', 'severity': 'critical', 'status': 'insufficient-data',
-                                      'start_date': str(now_str),
-                                      'tags': {'ns_id': ns_id,
-                                               'vdu_name': 'testing-ee-VyOS Router-vyos-VM-1',
-                                               'vnf_member_index': 'VyOS Router'}}}"""
-        """
-        message = {'_admin': {'created': date1, 'modified': date1,
-                              'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
-                              'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
-                   '_id': uid, 'detailedStatus': None, 'errorMessage': None,
-                   'id': uid, 'isAutomaticInvocation': False, 'isCancelPending': False,
-                   'lcmOperationType': 'scale',
-                   'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
-                             'self': '/osm/nslcm/v1/ns_lcm_op_occs/{}'.format(uid)},
-                   'nsInstanceId': ns_id,
-                   'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
-                                       'scaleType': 'SCALE_VNF', 'scaleVnfData': {
-                           'scaleByStepData': {'member-vnf-index': 'VyOS Router',
-                                               'scaling-group-descriptor': 'vyos-VM_autoscale',
-                                               'scaling-policy': 'string'},
-                           'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1}, 'operationState': 'PROCESSING',
-                   'queuePosition': None, 'stage': None, 'startTime': date2,
-                   'statusEnteredTime': date2}"""
-
-
-
-        """
-        loop = asyncio.get_event_loop()
-        kafka_server = '{}:{}'.format('kafka', '9092')
-        producer = AIOKafkaProducer(loop=loop,
-                                    bootstrap_servers=kafka_server,
-                                    key_serializer=str.encode,
-                                    value_serializer=str.encode)
-
-        loop.run_until_complete(producer.start())
-        try:
-            loop.run_until_complete(producer.send_and_wait("alarm_response", key="notify_alarm", value=json.dumps(msg)))
-        finally:
-            loop.run_until_complete(producer.stop())
-        logger.info("KAFKA scale action triggered")
-        """
-
-        """
-        client = MonClient()
-        loop = asyncio.get_event_loop()
-        alarm_uuid = loop.run_until_complete(
-            client.create_alarm(metric_name='osm_average_memory_utilization', ns_id=ns_id,
-                                vdu_name=values['vdu-data'][0]['name'],
-                                vnf_member_index=values['member-vnf-index-ref'], threshold=80,
-                                statistic='AVERAGE', operation='LT'))
-
-        logger.info("ALARM id is {}".format(alarm_uuid))"""
-
-        message = {'_admin': {'created': date2, 'modified': date2,
-                    'projects_read': ['20620bbd-25d9-4d37-a836-89cc2ffced62'],
-                    'projects_write': ['20620bbd-25d9-4d37-a836-89cc2ffced62']},
-         '_id': uid, 'detailedStatus': None, 'errorMessage': None,
-         'id': uid, 'isAutomaticInvocation': False, 'isCancelPending': False,
-         'lcmOperationType': 'scale',
-         'links': {'nsInstance': '/osm/nslcm/v1/ns_instances/{}'.format(ns_id),
-                   'self': '/osm/nslcm/v1/ns_lcm_op_occs/{}'.format(uid)},
-         'nsInstanceId': '{}'.format(ns_id),
-         'operationParams': {'lcmOperationType': 'scale', 'nsInstanceId': ns_id,
-                             'scaleType': 'SCALE_VNF', 'scaleVnfData': {
-                 'scaleByStepData': {'member-vnf-index': 'VyOS Router', 'scaling-group-descriptor': 'vyos-VM_autoscale',
-                                     'scaling-policy': 'string'}, 'scaleVnfType': 'SCALE_OUT'}, 'timeout_ns_scale': 1},
-         'operationState': 'PROCESSING', 'queuePosition': None, 'stage': None, 'startTime': date1,
-         'statusEnteredTime': date1}
-
-        logger.info("Luis {}".format(message))
-        loop = asyncio.get_event_loop()
-        msg_bus = MessageBusClient()
-        loop.run_until_complete(msg_bus.aiowrite('ns', 'scale', message))
-
-        logger.info("Terminado")
+        scale_ns(ns_id, token)
