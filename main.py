@@ -6,11 +6,9 @@ import os
 import requests
 from pymongo import MongoClient
 from prom_lib.prometheus_client import PrometheusClient
-from mon_client import MonClient
-import asyncio
-import json
+
 import datetime
-from message_bus_client import MessageBusClient
+from importlib import import_module
 
 import uuid
 
@@ -87,6 +85,29 @@ def update_token(token):
     requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
 
 
+def evaluate_v1(config, values):
+    if config['AIServer']['type'] == 'TensorFlow':
+        ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'])
+    else:
+        ai_url = config['AIServer']['url']
+
+
+    for prediction in config['predictions']:
+        if prediction['active']:
+            url = prediction['monitoring']['url']
+            if url == 'vnf':
+                url = values['vdu-data']['ip-address']
+            port = prediction['monitoring']['port']
+            url= url + ':' + port
+            data = requests.get(url).json()
+
+            threshold = prediction['threshold']
+            with open('aux_functions.py', 'w') as out_file:
+                out_file.write(threshold['logic'])
+            evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
+
+            if evaluation_function(data):
+                scale_ns(values['nsi_id'], values['token'])
 
 if __name__ == '__main__':
 
@@ -104,8 +125,10 @@ if __name__ == '__main__':
     logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
-    token = values['token']
+    token =
     update_token(values['token'])
 
-    if len(values['vdu-data']) == 2:
-        scale_ns(ns_id, token, scale="SCALE_IN")
+
+
+    if len(values['vdu-data']) == 1:
+        evaluate_v1(config, values)
