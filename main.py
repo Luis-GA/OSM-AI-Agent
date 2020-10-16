@@ -125,7 +125,6 @@ if __name__ == '__main__':
     logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
-    token =
     update_token(values['token'])
 
 
