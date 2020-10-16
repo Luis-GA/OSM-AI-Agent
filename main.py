@@ -38,6 +38,9 @@ def get_ns_info():
     osm = client['osm']
     values = {}
 
+    timestamp = datetime.datetime.utcnow().timestamp()
+    values['token'] = osm['tokens'].find_one({'expires': {'$gt': timestamp}, 'admin': True}).get('id')
+
     vnf = os.environ.get('vnf-id')
     vnf_data = list(osm['vnfrs'].find({'_id': vnf}))[0]
     values['member-vnf-index-ref'] = vnf_data['member-vnf-index-ref']
@@ -53,8 +56,7 @@ def get_ns_info():
 
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
-    timestamp = datetime.datetime.utcnow().timestamp()
-    values['token'] = osm['tokens'].find_one({'expires': {'$gt': timestamp}, 'admin': True}).find('id')
+
     return values
 
 
