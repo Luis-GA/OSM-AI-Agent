@@ -60,7 +60,7 @@ def get_ns_info():
     return values
 
 
-def scale_ns(nsi_id, token):
+def scale_ns(nsi_id, token, scale="SCALE_OUT"):
     token = "Bearer " + token
     headers = {'Authorization': token, 'accept': 'application/json'}
     url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
@@ -68,7 +68,7 @@ def scale_ns(nsi_id, token):
         "scaleType": "SCALE_VNF",
         "timeout_ns_scale": 1,
         "scaleVnfData": {
-            "scaleVnfType": "SCALE_OUT",
+            "scaleVnfType": scale,
             "scaleByStepData": {
                 "scaling-group-descriptor": "vyos-VM_autoscale",
                 "scaling-policy": "string",
@@ -105,5 +105,5 @@ if __name__ == '__main__':
     token = values['token']
     update_token(values['token'])
 
-    if len(values['vdu-data']) == 1:
-        scale_ns(ns_id, token)
+    if len(values['vdu-data']) == 2:
+        scale_ns(ns_id, token, scale="SCALE_IN")
