@@ -60,7 +60,8 @@ def get_ns_info():
     return values
 
 
-def scale_ns(nsi_id, token, scale="SCALE_OUT"):
+def scale_ns(nsi_id, token, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
+    # TODO: refactorizar
     token = "Bearer " + token
     headers = {'Authorization': token, 'accept': 'application/json'}
     url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
@@ -86,10 +87,11 @@ def update_token(token):
     requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
 
 
+
 if __name__ == '__main__':
 
     logger.info('Dummy AI Agent V3.1')
-    # logger.info('Environment variables:\n{}'.format(os.environ))
+    logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
 
     if config:
