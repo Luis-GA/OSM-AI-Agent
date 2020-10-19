@@ -120,7 +120,7 @@ def evaluate_v1(config, values):
 
             data = json.dumps(requests.get(url).json())
             logger.info('Metrics requested')
-            model_path = prediction['monitoring'] + ':predict'
+            model_path = prediction['model'] + ':predict'
             forecast_data = requests.post(ai_url + model_path, data=data).json()
             logger.info('prediction requested')
 
