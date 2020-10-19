@@ -79,14 +79,21 @@ def scale_ns(nsi_id, token, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None)
     return response.text
 
 
-def update_token(token):
+def update_token():
+    token = os.environ.get('NBI-Token', uuid.uuid4())
+    date = datetime.datetime.utcnow().timestamp()
+    token_data ={'_id': token, 'issued_at': date, 'expires': date + 60,
+     'id': token, 'project_id': '20620bbd-25d9-4d37-a836-89cc2ffced62',
+     'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09', 'admin': True,
+     'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
+
     token = "Bearer " + token
     headers = {'Authorization': token, 'accept': 'application/json'}
     requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
 
 
 def evaluate_v1(config, values):
-    if config['AIServer']['type'] == 'TensorFlow':
+    if config['AIServer']['type'] == 'tensorflow':
         ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'])
     else:
         ai_url = config['AIServer']['url']
@@ -94,19 +101,25 @@ def evaluate_v1(config, values):
 
     for prediction in config['predictions']:
         if prediction['active']:
+            logger.info('Prediction to perform: {}'.format(prediction))
             url = prediction['monitoring']['url']
             if url == 'vnf':
                 url = values['vdu-data']['ip-address']
             port = prediction['monitoring']['port']
             url= url + ':' + port
             data = requests.get(url).json()
+            logger.info('Metrics requested')
+
+            forecast_data = requests.post(ai_url, data=data).json()
+            logger.info('prediction requested')
 
             threshold = prediction['threshold']
             with open('aux_functions.py', 'w') as out_file:
                 out_file.write(threshold['logic'])
             evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
+            logger.info("importing evaluation function")
 
-            if evaluation_function(data):
+            if evaluation_function(forecast_data):
                 scale_ns(values['nsi_id'], values['token'])
 
 if __name__ == '__main__':
@@ -129,5 +142,5 @@ if __name__ == '__main__':
 
 
 
-    if len(values['vdu-data']) == 1:
+    if len(values['vdu-data']) == 99:
         evaluate_v1(config, values)
