@@ -107,7 +107,7 @@ def evaluate_v1(config, values):
             if url == 'vnf':
                 url = values['vdu-data']['ip-address']
             port = prediction['monitoring']['port']
-            url = url + ':' + port
+            url = url + ':' + str(port)
             data = requests.get(url).json()
             logger.info('Metrics requested')
 
