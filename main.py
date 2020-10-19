@@ -103,7 +103,7 @@ def url_composer(url, port=None):
 
 def evaluate_v1(config, values):
     if config['AIServer']['type'] == 'tensorflow':
-        ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'])
+        ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'], 'models')
     else:
         ai_url = config['AIServer']['url']
     ai_url = url_composer(ai_url)
@@ -118,10 +118,10 @@ def evaluate_v1(config, values):
             port = prediction['monitoring']['port']
             url = url_composer(url, port)
 
-            data = requests.get(url).json()
+            data = json.dumps(requests.get(url).json())
             logger.info('Metrics requested')
-
-            forecast_data = requests.post(ai_url, data=data).json()
+            model_path = prediction['monitoring'] + ':predict'
+            forecast_data = requests.post(ai_url + model_path, data=data).json()
             logger.info('prediction requested')
 
             threshold = prediction['threshold']
