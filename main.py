@@ -118,11 +118,11 @@ def evaluate_v1(config, values):
             port = prediction['monitoring']['port']
             url = url_composer(url, port)
 
-            data = json.dumps(requests.get(url).json())
+            data = requests.get(url).text
             logger.info('Metrics requested')
             model_path = prediction['model'] + ':predict'
             forecast_data = requests.post(ai_url + model_path, data=data).json()
-            logger.info('prediction requested')
+            logger.info('prediction requested: {}'.format(forecast_data))
 
             threshold = prediction['threshold']
             with open('aux_functions.py', 'w') as out_file:
