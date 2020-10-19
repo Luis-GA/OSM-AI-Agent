@@ -99,6 +99,7 @@ def evaluate_v1(config, values):
     else:
         ai_url = config['AIServer']['url']
 
+    logger.info("AI URL : {}".format(ai_url))
     for prediction in config['predictions']:
         if prediction['active']:
             logger.info('Prediction to perform: {}'.format(prediction))
@@ -120,25 +121,25 @@ def evaluate_v1(config, values):
             logger.info("importing evaluation function")
 
             if evaluation_function(forecast_data):
+                logger.info("SCALING")
                 scale_ns(values['nsi_id'])
 
 
 if __name__ == '__main__':
 
-    logger.info('Dummy AI Agent V3.1')
-    logger.info('Environment variables:\n{}'.format(os.environ))
+    logger.info('AI Agent V3.1')
+    #logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
 
     if config:
         config = b64decode(config)
         config = json.loads(config)
-        logger.info('Config:\n{}'.format(config))
+        #logger.info('Config:\n{}'.format(config))
     else:
         logger.info('No config available')
 
-    logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
 
-    if len(values['vdu-data']) == 99:
+    if len(values['vdu-data']) == 1:
         evaluate_v1(config, values)
