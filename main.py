@@ -1,5 +1,5 @@
 from base64 import b64decode
-import ast
+import json
 import logging
 import os
 
@@ -82,10 +82,11 @@ def scale_ns(nsi_id, token, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None)
 def update_token():
     token = os.environ.get('NBI-Token', uuid.uuid4())
     date = datetime.datetime.utcnow().timestamp()
-    token_data ={'_id': token, 'issued_at': date, 'expires': date + 60,
-     'id': token, 'project_id': '20620bbd-25d9-4d37-a836-89cc2ffced62',
-     'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09', 'admin': True,
-     'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
+    token_data = {'_id': token, 'issued_at': date, 'expires': date + 60,
+                  'id': token, 'project_id': '20620bbd-25d9-4d37-a836-89cc2ffced62',
+                  'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09',
+                  'admin': True,
+                  'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
 
     token = "Bearer " + token
     headers = {'Authorization': token, 'accept': 'application/json'}
@@ -98,7 +99,6 @@ def evaluate_v1(config, values):
     else:
         ai_url = config['AIServer']['url']
 
-
     for prediction in config['predictions']:
         if prediction['active']:
             logger.info('Prediction to perform: {}'.format(prediction))
@@ -106,7 +106,7 @@ def evaluate_v1(config, values):
             if url == 'vnf':
                 url = values['vdu-data']['ip-address']
             port = prediction['monitoring']['port']
-            url= url + ':' + port
+            url = url + ':' + port
             data = requests.get(url).json()
             logger.info('Metrics requested')
 
@@ -122,6 +122,7 @@ def evaluate_v1(config, values):
             if evaluation_function(forecast_data):
                 scale_ns(values['nsi_id'], values['token'])
 
+
 if __name__ == '__main__':
 
     logger.info('Dummy AI Agent V3.1')
@@ -130,7 +131,7 @@ if __name__ == '__main__':
 
     if config:
         config = b64decode(config)
-        config = ast.literal_eval(config.decode())
+        config = json.loads(config)
         logger.info('Config:\n{}'.format(config))
     else:
         logger.info('No config available')
@@ -139,8 +140,6 @@ if __name__ == '__main__':
     values = get_ns_info()
     ns_id = values['nsi_id']
     update_token(values['token'])
-
-
 
     if len(values['vdu-data']) == 99:
         evaluate_v1(config, values)
