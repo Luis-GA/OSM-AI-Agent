@@ -89,8 +89,16 @@ def update_token():
     client.insert_one(token_data)
     token = "Bearer " + token
     return token
-    #headers = {'Authorization': token, 'accept': 'application/json'}
-    #requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
+    # headers = {'Authorization': token, 'accept': 'application/json'}
+    # requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
+
+
+def url_composer(url, port=None):
+    if url[0] != 'h':
+        url = 'http://{}'.format(url)
+    if port:
+        url = url + ':' + str(port)
+    return url
 
 
 def evaluate_v1(config, values):
@@ -98,8 +106,9 @@ def evaluate_v1(config, values):
         ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'])
     else:
         ai_url = config['AIServer']['url']
-
+    ai_url = url_composer(ai_url)
     logger.info("AI URL : {}".format(ai_url))
+
     for prediction in config['predictions']:
         if prediction['active']:
             logger.info('Prediction to perform: {}'.format(prediction))
@@ -107,7 +116,8 @@ def evaluate_v1(config, values):
             if url == 'vnf':
                 url = values['vdu-data']['ip-address']
             port = prediction['monitoring']['port']
-            url = url + ':' + str(port)
+            url = url_composer(url, port)
+
             data = requests.get(url).json()
             logger.info('Metrics requested')
 
@@ -128,13 +138,13 @@ def evaluate_v1(config, values):
 if __name__ == '__main__':
 
     logger.info('AI Agent V3.1')
-    #logger.info('Environment variables:\n{}'.format(os.environ))
+    # logger.info('Environment variables:\n{}'.format(os.environ))
     config = os.environ.get('config')
 
     if config:
         config = b64decode(config)
         config = json.loads(config)
-        #logger.info('Config:\n{}'.format(config))
+        # logger.info('Config:\n{}'.format(config))
     else:
         logger.info('No config available')
 
