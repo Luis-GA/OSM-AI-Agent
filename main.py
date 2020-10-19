@@ -86,6 +86,11 @@ def update_token():
                   'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09',
                   'admin': True,
                   'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
+    try:
+        client.delete_one({'id': token})
+    except Exception as e:
+        logger.debug(e)
+
     client.insert_one(token_data)
     token = "Bearer " + token
     return token
