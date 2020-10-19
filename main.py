@@ -37,7 +37,6 @@ def get_ns_info():
     values = {}
 
     timestamp = datetime.datetime.utcnow().timestamp()
-    values['token'] = osm['tokens'].find_one({'expires': {'$gt': timestamp}, 'admin': True}).get('id')
 
     vnf = os.environ.get('vnf-id')
     vnf_data = list(osm['vnfrs'].find({'_id': vnf}))[0]
@@ -58,9 +57,8 @@ def get_ns_info():
     return values
 
 
-def scale_ns(nsi_id, token, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
-    # TODO: refactorizar
-    token = "Bearer " + token
+def scale_ns(nsi_id, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
+    token = update_token()
     headers = {'Authorization': token, 'accept': 'application/json'}
     url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
     scale_data = {
@@ -80,6 +78,7 @@ def scale_ns(nsi_id, token, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None)
 
 
 def update_token():
+    client = MongoClient('mongo', 27017)['osm']['tokens']
     token = os.environ.get('NBI-Token', uuid.uuid4())
     date = datetime.datetime.utcnow().timestamp()
     token_data = {'_id': token, 'issued_at': date, 'expires': date + 60,
@@ -87,10 +86,11 @@ def update_token():
                   'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09',
                   'admin': True,
                   'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
-
+    client.insert_one(token_data)
     token = "Bearer " + token
-    headers = {'Authorization': token, 'accept': 'application/json'}
-    requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
+    return token
+    #headers = {'Authorization': token, 'accept': 'application/json'}
+    #requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
 
 
 def evaluate_v1(config, values):
@@ -120,7 +120,7 @@ def evaluate_v1(config, values):
             logger.info("importing evaluation function")
 
             if evaluation_function(forecast_data):
-                scale_ns(values['nsi_id'], values['token'])
+                scale_ns(values['nsi_id'])
 
 
 if __name__ == '__main__':
@@ -139,7 +139,6 @@ if __name__ == '__main__':
     logger.info("Now the database:")
     values = get_ns_info()
     ns_id = values['nsi_id']
-    update_token(values['token'])
 
     if len(values['vdu-data']) == 99:
         evaluate_v1(config, values)
