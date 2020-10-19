@@ -130,9 +130,12 @@ def evaluate_v1(config, values):
             evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
             logger.info("importing evaluation function")
 
-            if evaluation_function(forecast_data):
-                logger.info("SCALING")
+            if evaluation_function(forecast_data) and len(values['vdu-data']) == 1:
+                logger.info("SCALING OUT")
                 scale_ns(values['nsi_id'])
+            elif (not evaluation_function(forecast_data)) and len(values['vdu-data']) > 1:
+                logger.info("SCALING IN")
+                scale_ns(values['nsi_id'], scale="SCALE_IN")
 
 
 if __name__ == '__main__':
@@ -151,5 +154,4 @@ if __name__ == '__main__':
     values = get_ns_info()
     ns_id = values['nsi_id']
 
-    if len(values['vdu-data']) == 1:
-        evaluate_v1(config, values)
+    evaluate_v1(config, values)
