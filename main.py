@@ -54,7 +54,7 @@ def get_ns_info():
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
     values['project_id'] = ns_data.get('_admin').get('projects_write', [None])[0]
-    scaling_name = osm['vnfds'].find_one({'name': vnf_data['name']}).get('scaling-group-descriptor', {}).get('name')
+    scaling_name = osm['vnfds'].find_one({'_id': vnf_data['vnfd-id']}).get('scaling-group-descriptor', {}).get('name')
     values['scaling-group-descriptor'] = scaling_name
     return values
 
@@ -162,6 +162,7 @@ if __name__ == '__main__':
         logger.info('No config available')
 
     values = get_ns_info()
+    logger.info('values: {}'.format(values))
     ns_id = values['nsi_id']
 
     evaluate_v1(config, values)
