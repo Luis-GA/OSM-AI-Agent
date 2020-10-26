@@ -4,7 +4,7 @@ import logging
 import os
 
 import requests
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from prom_lib.prometheus_client import PrometheusClient
 
 import datetime
@@ -39,7 +39,7 @@ def get_ns_info():
     timestamp = datetime.datetime.utcnow().timestamp()
 
     vnf = os.environ.get('vnf-id')
-    vnf_data = list(osm['vnfrs'].find({'_id': vnf}))[0]
+    vnf_data = osm['vnfrs'].find_one({'_id': vnf})
     values['member-vnf-index-ref'] = vnf_data['member-vnf-index-ref']
     values['nsi_id'] = vnf_data['nsr-id-ref']
     vduData = []
@@ -53,12 +53,14 @@ def get_ns_info():
 
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
-
+    values['project_id'] = ns_data.get('_admin').get('projects_write', [None])[0]
+    scaling_name = osm['vnfds'].find_one({'name': vnf_data['name']}).get('scaling-group-descriptor', {}).get('name')
+    values['scaling-group-descriptor'] = scaling_name
     return values
 
 
-def scale_ns(nsi_id, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
-    token = update_token()
+def scale_ns(nsi_id, project_id, scaling_group, vnf_index, scale="SCALE_OUT"):
+    token = update_token(project_id)
     headers = {'Authorization': token, 'accept': 'application/json'}
     url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
     scale_data = {
@@ -67,9 +69,9 @@ def scale_ns(nsi_id, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
         "scaleVnfData": {
             "scaleVnfType": scale,
             "scaleByStepData": {
-                "scaling-group-descriptor": "vyos-VM_autoscale",
+                "scaling-group-descriptor": scaling_group,
                 "scaling-policy": "string",
-                "member-vnf-index": "VyOS Router"
+                "member-vnf-index": vnf_index
             }
         }
     }
@@ -77,15 +79,16 @@ def scale_ns(nsi_id, scale="SCALE_OUT", scalingGroup=None, vnfIndex=None):
     return response.text
 
 
-def update_token():
+def update_token(project_id):
     client = MongoClient('mongo', 27017)['osm']['tokens']
     token = os.environ.get('NBI-Token', uuid.uuid4())
     date = datetime.datetime.utcnow().timestamp()
-    token_data = {'_id': token, 'issued_at': date, 'expires': date + 60,
-                  'id': token, 'project_id': '20620bbd-25d9-4d37-a836-89cc2ffced62',
-                  'project_name': 'admin', 'username': 'admin', 'user_id': 'acef17bd-f9a1-42d6-8bed-396d66210c09',
-                  'admin': True,
-                  'roles': [{'name': 'system_admin', 'id': '04f86f3a-c569-4a76-9338-c06fddc52e7a'}]}
+    token_data = client.find_one({'project_id': project_id}, sort=[('expires', DESCENDING)])
+    token_data['_id'] = token
+    token_data['id'] = token
+    token_data['issued_at'] = date
+    token_data['expires'] = date + 5
+
     try:
         client.delete_one({'id': token})
     except Exception as e:
@@ -135,12 +138,14 @@ def evaluate_v1(config, values):
             evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
             logger.info("importing evaluation function")
 
-            if evaluation_function(forecast_data) and len(values['vdu-data']) == 1:
+            if evaluation_function(forecast_data) and (len(values['vdu-data']) == 1):
                 logger.info("SCALING OUT")
-                scale_ns(values['nsi_id'])
+                scale_ns(values['nsi_id'], values['project_id'], values['scaling-group-descriptor'],
+                         values['member-vnf-index-ref'])
             elif (not evaluation_function(forecast_data)) and len(values['vdu-data']) > 1:
                 logger.info("SCALING IN")
-                scale_ns(values['nsi_id'], scale="SCALE_IN")
+                scale_ns(values['nsi_id'], values['project_id'], values['scaling-group-descriptor'],
+                         values['member-vnf-index-ref'], scale="SCALE_IN")
 
 
 if __name__ == '__main__':
