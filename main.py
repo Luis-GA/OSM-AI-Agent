@@ -54,8 +54,8 @@ def get_ns_info():
     values['ns_name'] = ns_data.get('name')
     values['vnfs'] = ns_data.get('constituent-vnfr-ref', [])
     values['project_id'] = ns_data.get('_admin').get('projects_write', [None])[0]
-    scaling_name = osm['vnfds'].find_one({'_id': vnf_data['vnfd-id']}).get('scaling-group-descriptor', {}).get('name')
-    values['scaling-group-descriptor'] = scaling_name
+    scaling = osm['vnfds'].find_one({'_id': vnf_data['vnfd-id']}).get('scaling-group-descriptor', [{}])[0].get('name')
+    values['scaling-group-descriptor'] = scaling
     return values
 
 
