@@ -127,8 +127,8 @@ def get_metrics(prediction, values):
 
 
 def ai_evaluation(prediction, ai_url, data):
-    ai_url.format(prediction['model'])
-    forecast_data = requests.post(ai_url, data=data).json()
+    url = ai_url.format(prediction['model'])
+    forecast_data = requests.post(url, data=data).json()
     logger.info('prediction requested: {}'.format(forecast_data))
 
     threshold = prediction['threshold']
