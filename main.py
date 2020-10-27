@@ -21,10 +21,8 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(stream_handler)
 
 
-def get_prometheus_data(ns_id, query='', step=120, days=2):
+def get_prometheus_data(ns_id, query, step=120, days=2):
     client = PrometheusClient('http://prometheus:9090')
-    if not query:
-        query = 'osm_average_memory_utilization'
 
     ts_data = client.range_query(query, ns_id, step=step, days=days)
     timeseries = ts_data['result'][0]['values']
@@ -35,8 +33,6 @@ def get_ns_info():
     client = MongoClient('mongo', 27017)
     osm = client['osm']
     values = {}
-
-    timestamp = datetime.datetime.utcnow().timestamp()
 
     vnf = os.environ.get('vnf-id')
     vnf_data = osm['vnfrs'].find_one({'_id': vnf})
@@ -109,9 +105,44 @@ def url_composer(url, port=None):
     return url
 
 
+def get_metrics(prediction, values):
+    data = []
+    url = prediction['monitoring'].get('url')
+    prom_query = prediction['monitoring'].get('prometheusQuery')
+    if url:
+        url = prediction['monitoring']['url']
+        if url == 'vnf':
+            url = values['vdu-data']['ip-address']
+        port = prediction['monitoring']['port']
+        url = url_composer(url, port)
+        data = requests.get(url).text
+    elif prom_query:
+        stepsTime = prediction['monitoring'].get('stepsTime') * 60
+        dataWindowTime = prediction['monitoring'].get('dataWindowTime') / 1440
+
+        data = get_prometheus_data(values['nsi_id'], prom_query, step=stepsTime, days=dataWindowTime)
+
+    logger.info('Metrics requested')
+    return data
+
+
+def ai_evaluation(prediction, ai_url, data):
+    ai_url.format(prediction['model'])
+    forecast_data = requests.post(ai_url, data=data).json()
+    logger.info('prediction requested: {}'.format(forecast_data))
+
+    threshold = prediction['threshold']
+    with open('aux_functions.py', 'w') as out_file:
+        out_file.write(threshold['logic'])
+    evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
+    logger.info("importing evaluation function")
+
+    return evaluation_function(forecast_data)
+
+
 def evaluate_v1(config, values):
     if config['AIServer']['type'] == 'tensorflow':
-        ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'], 'models')
+        ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'], 'models') + '/{}:predict'
     else:
         ai_url = config['AIServer']['url']
     ai_url = url_composer(ai_url)
@@ -120,29 +151,15 @@ def evaluate_v1(config, values):
     for prediction in config['predictions']:
         if prediction['active']:
             logger.info('Prediction to perform: {}'.format(prediction))
-            url = prediction['monitoring']['url']
-            if url == 'vnf':
-                url = values['vdu-data']['ip-address']
-            port = prediction['monitoring']['port']
-            url = url_composer(url, port)
+            data = get_metrics(prediction, values)
 
-            data = requests.get(url).text
-            logger.info('Metrics requested')
-            model_path = '/' + prediction['model'] + ':predict'
-            forecast_data = requests.post(ai_url + model_path, data=data).json()
-            logger.info('prediction requested: {}'.format(forecast_data))
+            evaluation = ai_evaluation(prediction, ai_url, data)
 
-            threshold = prediction['threshold']
-            with open('aux_functions.py', 'w') as out_file:
-                out_file.write(threshold['logic'])
-            evaluation_function = getattr(import_module('aux_functions'), threshold['function_name'])
-            logger.info("importing evaluation function")
-
-            if evaluation_function(forecast_data) and (len(values['vdu-data']) == 1):
+            if evaluation and (len(values['vdu-data']) == 1):
                 logger.info("SCALING OUT")
                 scale_ns(values['nsi_id'], values['project_id'], values['scaling-group-descriptor'],
                          values['member-vnf-index-ref'])
-            elif (not evaluation_function(forecast_data)) and len(values['vdu-data']) > 1:
+            elif not evaluation and len(values['vdu-data']) > 1:
                 logger.info("SCALING IN")
                 scale_ns(values['nsi_id'], values['project_id'], values['scaling-group-descriptor'],
                          values['member-vnf-index-ref'], scale="SCALE_IN")
@@ -150,19 +167,17 @@ def evaluate_v1(config, values):
 
 if __name__ == '__main__':
 
-    logger.info('AI Agent V3.1')
-    # logger.info('Environment variables:\n{}'.format(os.environ))
+    logger.info('AI Agent V1.0')
     config = os.environ.get('config')
 
     if config:
         config = b64decode(config)
         config = json.loads(config)
-        # logger.info('Config:\n{}'.format(config))
+        logger.info('Config:\n{}'.format(config))
     else:
         logger.info('No config available')
 
     values = get_ns_info()
-    logger.info('values: {}'.format(values))
-    ns_id = values['nsi_id']
+    logger.info('Values:\n{}'.format(config))
 
     evaluate_v1(config, values)
