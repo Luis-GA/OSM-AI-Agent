@@ -23,7 +23,6 @@ logger.addHandler(stream_handler)
 
 def get_prometheus_data(ns_id, query, step=120, days=2):
     client = PrometheusClient('http://prometheus:9090')
-
     ts_data = client.range_query(query, ns_id, step=step, days=days)
     timeseries = ts_data['result'][0]['values']
     return timeseries
@@ -72,6 +71,7 @@ def scale_ns(nsi_id, project_id, scaling_group, vnf_index, scale="SCALE_OUT"):
         }
     }
     response = requests.post(url, data=str(scale_data), verify=False, headers=headers)
+    delete_token(token)
     return response.text
 
 
@@ -93,8 +93,12 @@ def update_token(project_id):
     client.insert_one(token_data)
     token = "Bearer " + token
     return token
-    # headers = {'Authorization': token, 'accept': 'application/json'}
-    # requests.post('https://nbi:9999/osm/admin/v1/tokens', verify=False, headers=headers)
+
+
+def delete_token(token):
+    token = token.split('Bearer ')[-1]
+    client = MongoClient('mongo', 27017)['osm']['tokens']
+    client.delete_one({'id': token})
 
 
 def url_composer(url, port=None):
