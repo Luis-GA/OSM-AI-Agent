@@ -22,6 +22,14 @@ logger.addHandler(stream_handler)
 
 
 def get_prometheus_data(ns_id, query, step=120, days=2):
+    """
+    Prometheus data requester
+    :param ns_id: network service instance id
+    :param query: prometheus query
+    :param step: time between probe and probe (in seconds)
+    :param days: interval of data (current datetime - days, current datetime)
+    :return: Prometheus data: List of tuples [(value of metric, timestamp), ...]
+    """
     client = PrometheusClient('http://prometheus:9090')
     ts_data = client.range_query(query, ns_id, step=step, days=days)
     timeseries = ts_data['result'][0]['values']
@@ -29,6 +37,19 @@ def get_prometheus_data(ns_id, query, step=120, days=2):
 
 
 def get_ns_info():
+    """
+    Network service data requester using MongoDB as datasource
+    :return: Network Service Data with the following structure:
+                {
+                'member-vnf-index-ref': <string>,
+                'nsi_id': <string>,
+                'vdu-data': <list>,
+                'ns_name': <string>,
+                'vnfs': <list>,
+                'project_id': <string>,
+                'scaling-group-descriptor': <string>
+                }
+    """
     client = MongoClient('mongo', 27017)
     osm = client['osm']
     values = {}
@@ -55,6 +76,15 @@ def get_ns_info():
 
 
 def scale_ns(nsi_id, project_id, scaling_group, vnf_index, scale="SCALE_OUT"):
+    """
+    Scale in/out trigger for NS.
+    :param nsi_id:  Network Service instance identification
+    :param project_id: OSM Project identification
+    :param scaling_group: Scaling group action (Specified  in the VNF descriptor)
+    :param vnf_index: Virtual Network Function index (Specified  in the VNF descriptor)
+    :param scale: Scale action 2 possibilities: 'SCALE_OUT' Or 'SCALE_IN'
+    :return: Scaling action response
+    """
     token = update_token(project_id)
     headers = {'Authorization': token, 'accept': 'application/json'}
     url = 'https://nbi:9999/osm/nslcm/v1/ns_instances/{}/scale'.format(nsi_id)
@@ -76,6 +106,11 @@ def scale_ns(nsi_id, project_id, scaling_group, vnf_index, scale="SCALE_OUT"):
 
 
 def update_token(project_id):
+    """
+    NBI Token generator to provide authorization access
+    :param project_id: OSM Project identification
+    :return: token to perform requests in an authorized way
+    """
     client = MongoClient('mongo', 27017)['osm']['tokens']
     token = os.environ.get('NBI-Token', uuid.uuid4())
     date = datetime.datetime.utcnow().timestamp()
@@ -96,12 +131,23 @@ def update_token(project_id):
 
 
 def delete_token(token):
+    """
+    Remove used token for scaling actions to be deleted
+    :param token: token used
+    :return: None
+    """
     token = token.split('Bearer ')[-1]
     client = MongoClient('mongo', 27017)['osm']['tokens']
     client.delete_one({'id': token})
 
 
 def url_composer(url, port=None):
+    """
+    URL composer
+    :param url: URL to compose
+    :param port: optional port to compose
+    :return: composed URL
+    """
     if url[0] != 'h':
         url = 'http://{}'.format(url)
     if port:
@@ -110,6 +156,12 @@ def url_composer(url, port=None):
 
 
 def get_metrics(prediction, values):
+    """
+    Metrics requester in evaluation phase
+    :param prediction: prediction object defined in the helm chart values
+    :param values: values obtained by the function get_ns_info
+    :return: metrics
+    """
     data = []
     url = prediction['monitoring'].get('url')
     prom_query = prediction['monitoring'].get('prometheusQuery')
@@ -131,6 +183,13 @@ def get_metrics(prediction, values):
 
 
 def ai_evaluation(prediction, ai_url, data):
+    """
+    AI evaluation asking the AI Server and being evaluated by the threshold defined in the helm chart
+    :param prediction: prediction object defined in the helm chart values
+    :param ai_url: AI URL defined in the helm chart
+    :param data: metrics data
+    :return: True for scaling, False for not scaling
+    """
     url = ai_url.format(prediction['model'])
     forecast_data = requests.post(url, data=data).json()
     logger.info('prediction requested: {}'.format(forecast_data))
@@ -145,6 +204,12 @@ def ai_evaluation(prediction, ai_url, data):
 
 
 def evaluate_v1(config, values):
+    """
+    Evaluation function V1
+    :param config: configuration object defined in the helm chart values
+    :param values: values obtained by the function get_ns_info
+    :return: None
+    """
     if config['AIServer']['type'] == 'tensorflow':
         ai_url = os.path.join(config['AIServer']['url'], config['AIServer']['version'], 'models') + '/{}:predict'
     else:
@@ -182,6 +247,6 @@ if __name__ == '__main__':
         logger.info('No config available')
 
     values = get_ns_info()
-    logger.info('Values:\n{}'.format(config))
+    logger.info('Values:\n{}'.format(values))
 
     evaluate_v1(config, values)
